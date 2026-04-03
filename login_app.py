@@ -22,74 +22,69 @@ chrome_options.add_argument('--window-size=1920,1080')
 driver = webdriver.Chrome(options=chrome_options)
 
 try:
-    print("1. Opening home page...")
+    # 1. Vai alla home (per i cookie iniziali)
+    print("Opening home page...")
     driver.get("https://www.easyhits4u.com")
     time.sleep(3)
-    print("   URL: {}".format(driver.current_url))
     
-    print("2. Opening login page...")
+    # 2. Vai direttamente alla pagina di login (per avere il form pulito)
+    print("Opening login page...")
     driver.get("https://www.easyhits4u.com/logon")
-    time.sleep(3)
-    print("   URL: {}".format(driver.current_url))
+    time.sleep(5)  # Aspetta che tutto il JavaScript sia eseguito
     
-    print("3. Waiting for login form...")
-    wait = WebDriverWait(driver, 15)
-    username_field = wait.until(EC.presence_of_element_located((By.NAME, "username")))
+    # 3. Cerca eventuali token CSRF (esempio: name="csrf_token")
+    csrf_token = None
+    try:
+        csrf_element = driver.find_element(By.NAME, "csrf_token")
+        csrf_token = csrf_element.get_attribute("value")
+        print("CSRF Token found: {}".format(csrf_token))
+    except:
+        print("No CSRF token found, proceeding without it")
+    
+    # 4. Inserisci le credenziali
+    print("Entering credentials...")
+    username_field = driver.find_element(By.NAME, "username")
     password_field = driver.find_element(By.NAME, "password")
     
-    print("4. Entering credentials...")
     username_field.clear()
     username_field.send_keys(EMAIL)
     password_field.clear()
     password_field.send_keys(PASSWORD)
     
-    print("5. Clicking Enter button...")
-    submit_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn_green")))
-    driver.execute_script("arguments[0].click();", submit_button)
+    # 5. Invia il modulo
+    print("Submitting login...")
     
-    # Controlla l'URL dopo 3 secondi
-    time.sleep(3)
-    url_after_click = driver.current_url
-    print("6. URL after 3 seconds: {}".format(url_after_click))
+    # Opzione A: Se c'è un pulsante "Enter", usalo
+    try:
+        submit_button = driver.find_element(By.CSS_SELECTOR, "button.btn_green")
+        driver.execute_script("arguments[0].click();", submit_button)
+    except:
+        # Opzione B: Altrimenti, invia il modulo direttamente
+        form = driver.find_element(By.TAG_NAME, "form")
+        driver.execute_script("arguments[0].submit();", form)
     
-    # Controlla l'URL dopo 8 secondi
-    time.sleep(5)
-    url_after_wait = driver.current_url
-    print("7. URL after 8 seconds: {}".format(url_after_wait))
+    # 6. Attendi il reindirizzamento
+    time.sleep(8)
+    print("Current URL: {}".format(driver.current_url))
     
-    # Controlla se c'è warning=il (login fallito)
-    if "warning=il" in url_after_wait:
-        print("   -> LOGIN FAILED: invalid credentials or Turnstile")
-    elif "account/home" in url_after_wait:
-        print("   -> LOGIN SUCCESS: redirect to account/home")
-    elif "surf" in url_after_wait:
-        print("   -> LOGIN SUCCESS: already on surf page")
+    # 7. Verifica il successo
+    if "warning=il" in driver.current_url:
+        print("LOGIN FAILED: Invalid credentials or missing CSRF token")
     else:
-        print("   -> UNKNOWN: {}".format(url_after_wait))
-    
-    # Prova a navigare alla surf page
-    print("8. Navigating to surf page...")
-    driver.get("https://www.easyhits4u.com/surf/?surftype=2&q=start")
-    time.sleep(3)
-    print("   URL after surf: {}".format(driver.current_url))
-    
-    # Cookie
-    cookies = driver.get_cookies()
-    print("\n9. COOKIES FOUND: {}".format(len(cookies)))
-    for cookie in cookies:
-        if cookie['name'] in ['user_id', 'sesids', '_cfuvid']:
-            print("   {} = {}".format(cookie['name'], cookie['value'][:30] if len(cookie['value']) > 30 else cookie['value']))
-    
-    user_id = next((c['value'] for c in cookies if c['name'] == 'user_id'), None)
-    sesids = next((c['value'] for c in cookies if c['name'] == 'sesids'), None)
-    
-    print("\n" + "=" * 60)
-    if user_id and sesids:
-        print("SUCCESS!")
-        print("user_id={}; sesids={}".format(user_id, sesids))
-    else:
-        print("FAILED: No cookies")
-    print("=" * 60)
+        print("LOGIN SUCCESSFUL!")
+        
+        # Vai alla pagina di surf per generare i cookie finali
+        driver.get("https://www.easyhits4u.com/surf/?surftype=2&q=start")
+        time.sleep(5)
+        
+        cookies = driver.get_cookies()
+        user_id = next((c['value'] for c in cookies if c['name'] == 'user_id'), None)
+        sesids = next((c['value'] for c in cookies if c['name'] == 'sesids'), None)
+        
+        if user_id and sesids:
+            print("COOKIE STRING: user_id={}; sesids={}".format(user_id, sesids))
+        else:
+            print("No user cookies found after navigation")
     
 except Exception as e:
     print("ERROR: {}".format(e))
