@@ -30,7 +30,6 @@ try:
     driver.get("https://www.easyhits4u.com/logon")
     time.sleep(3)
     
-    # Aspetta che il modal sia visibile e che l'input username sia cliccabile
     print("Waiting for login form to be ready...")
     wait = WebDriverWait(driver, 15)
     username_field = wait.until(EC.element_to_be_clickable((By.NAME, "username")))
@@ -40,23 +39,28 @@ try:
     username_field.send_keys(EMAIL)
     password_field.send_keys(PASSWORD)
     
-    # Aspetta che il pulsante Enter sia cliccabile
     print("Waiting for Enter button...")
     submit_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn_green")))
     
-    # Clicca usando JavaScript per bypassare l'intercettazione
     print("Submitting login...")
     driver.execute_script("arguments[0].click();", submit_button)
     
     # Attendi il redirect dopo il login
     time.sleep(5)
     
-    # Ottieni cookie
+    # Stampa l'URL corrente per debug
+    current_url = driver.current_url
+    print("Current URL after login: {}".format(current_url))
+    
+    # Ottieni tutti i cookie
     cookies = driver.get_cookies()
+    print("Number of cookies found: {}".format(len(cookies)))
+    
     user_id = None
     sesids = None
     
     for cookie in cookies:
+        print("Cookie: {} = {}".format(cookie['name'], cookie['value'][:20] if len(cookie['value']) > 20 else cookie['value']))
         if cookie['name'] == 'user_id':
             user_id = cookie['value']
         if cookie['name'] == 'sesids':
@@ -64,7 +68,12 @@ try:
     
     print("=" * 60)
     print("COOKIE STRING:")
-    print("user_id={}; sesids={}".format(user_id, sesids))
+    if user_id and sesids:
+        print("user_id={}; sesids={}".format(user_id, sesids))
+    else:
+        print("No valid cookies found")
+        print("user_id found: {}".format(user_id is not None))
+        print("sesids found: {}".format(sesids is not None))
     print("=" * 60)
     
 except Exception as e:
