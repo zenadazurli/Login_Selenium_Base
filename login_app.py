@@ -37,7 +37,8 @@ try:
     password_field.send_keys(PASSWORD)
     
     print("Submitting login...")
-    submit_button = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
+    # CORREZIONE: usa il selettore corretto per il bottone Enter
+    submit_button = driver.find_element(By.CSS_SELECTOR, "button.btn_green")
     submit_button.click()
     
     time.sleep(5)
