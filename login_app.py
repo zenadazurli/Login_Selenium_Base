@@ -2,6 +2,8 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import os
 import time
 
@@ -10,7 +12,6 @@ PASSWORD = os.environ.get('EASYHITS_PASSWORD', 'GF45!!dave')
 
 print("Login Service Started")
 
-# Configura Chrome
 chrome_options = Options()
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--no-sandbox')
@@ -29,18 +30,25 @@ try:
     driver.get("https://www.easyhits4u.com/logon")
     time.sleep(3)
     
-    print("Entering credentials...")
-    username_field = driver.find_element(By.NAME, "username")
+    # Aspetta che il modal sia visibile e che l'input username sia cliccabile
+    print("Waiting for login form to be ready...")
+    wait = WebDriverWait(driver, 15)
+    username_field = wait.until(EC.element_to_be_clickable((By.NAME, "username")))
     password_field = driver.find_element(By.NAME, "password")
     
+    print("Entering credentials...")
     username_field.send_keys(EMAIL)
     password_field.send_keys(PASSWORD)
     
-    print("Submitting login...")
-    # CORREZIONE: usa il selettore corretto per il bottone Enter
-    submit_button = driver.find_element(By.CSS_SELECTOR, "button.btn_green")
-    submit_button.click()
+    # Aspetta che il pulsante Enter sia cliccabile
+    print("Waiting for Enter button...")
+    submit_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn_green")))
     
+    # Clicca usando JavaScript per bypassare l'intercettazione
+    print("Submitting login...")
+    driver.execute_script("arguments[0].click();", submit_button)
+    
+    # Attendi il redirect dopo il login
     time.sleep(5)
     
     # Ottieni cookie
